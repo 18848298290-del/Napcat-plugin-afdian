@@ -1,168 +1,137 @@
-# AfdianNap - NapCat 爱发电插件
+# AfdianNap
 
-一个 [NapCat](https://napneko.github.io/) 插件，用于将 [爱发电](https://afdian.com/) 平台与 QQ 打通，提供赞助通知、订单查询、入群验证等功能。
+NapCat 爱发电对接助手。用于接收爱发电 Webhook、查询订单、向 QQ 群/用户发送赞助通知，并可按爱发电订单备注自动校验入群申请。
 
-## ✨ 功能特性
+开发者：FengLan ｜ 爱发电：https://www.ifdian.net/a/FengLan1201
 
-### 🔔 Webhook 实时通知
-- 接收爱发电 Webhook 回调，实时推送赞助消息到指定 QQ 群 / 私聊
-- 支持 Webhook 签名验证，防止伪造请求
-- 自动订单去重，避免重复通知（最多缓存 5000 条订单号）
+## 功能
 
-### 📋 QQ 命令系统
-| 命令 | 说明 | 权限 |
-|------|------|------|
-| `/afdian 发电` | 显示爱发电主页链接 | 所有人 |
-| `/afdian 赞助列表` | 列出所有赞助者 | 所有人 |
-| `/afdian help` | 显示帮助菜单 | 所有人 |
-| `/afdian status` | 查看插件运行状态 | 管理员 |
-| `/afdian test` | 发送测试通知 | 管理员 |
-| `/afdian history [N]` | 查看最近 N 条通知记录 | 管理员 |
-| `/afdian order <订单号>` | 查询指定订单 | 管理员 |
-| `/afdian orders [页码] [数量]` | 分页查询订单列表 | 管理员 |
+- 爱发电 Webhook 通知接收
+- 爱发电 OpenAPI 订单查询
+- QQ 群/私聊赞助通知
+- WebUI 配置页与通知历史
+- QQ 指令查询发电主页、赞助列表、订单、状态
+- 入群申请发电校验：匹配订单备注中的 QQ 号并校验最低发电金额
+- 通知历史与去重缓存持久化，NapCat 重启后仍可保留最近状态
+- 爱发电 API 请求超时保护，避免接口异常时长期卡住 WebUI 或 QQ 指令
+- Webhook 路径和 QQ 号配置规范化，减少生产环境误配置风险
 
-### ✅ 入群验证
-- 自动验证新成员入群请求，通过爱发电订单备注中的 QQ 号进行匹配
-- 可设置最低赞助金额门槛
-- 验证失败自动通知管理员
+## 安装
 
-### 🖥️ Web 管理面板
-- 可视化配置管理
-- 实时状态监控（30 秒自动刷新）
-- 订单查询与 API 测试
-- 通知历史记录查看
-- 支持亮色/暗色主题
+1. 将本目录放入 NapCat 原生插件目录。
+2. 确认 `package.json` 中插件名为 `AfdianNap`，主入口为 `index.mjs`。
+3. 重启 NapCat。
+4. 在 NapCat 插件页面启用 AfdianNap。
 
-## 📦 安装
+## 配置
 
-将本项目放入 NapCat 的插件目录中：
+进入插件页面：
+
+```text
+/plugin/AfdianNap/page/dashboard
+```
+
+或在 NapCat WebUI 的插件扩展页面中打开 AfdianNap。
+
+建议至少配置：
+
+- `爱发电 user_id`
+- `爱发电 token`
+- `通知 QQ 群` 或 `通知 QQ 用户`
+- `爱发电主页`
+
+默认会开启签名校验。如果未配置爱发电 token，Webhook 会被拒绝处理。
+
+Webhook 路径只能包含字母、数字、斜杠、下划线和短横线。QQ 号、群号配置会自动过滤非数字项。
+
+## Webhook 地址
+
+默认 Webhook 路径：
+
+```text
+/afdian/webhook
+```
+
+完整地址格式：
+
+```text
+https://你的公网域名/plugin/AfdianNap/api/afdian/webhook
+```
+
+如果 NapCat 运行在本地电脑，需要使用公网域名、反向代理或内网穿透，确保爱发电服务器可以访问。
+
+修改 Webhook 路径后通常需要重启 NapCat，因为路由是在插件初始化时注册的。
+
+## QQ 指令
+
+默认指令前缀：
+
+```text
+/afdian
+```
+
+所有用户可用：
+
+```text
+/afdian 发电
+/afdian 赞助列表
+/afdian help
+```
+
+管理员可用，管理员 QQ 需要在配置里填写：
+
+```text
+/afdian status
+/afdian test
+/afdian history [数量]
+/afdian order <订单号>
+/afdian orders [页码] [数量]
+```
+
+## 入群发电校验
+
+启用后，插件会处理指定群的入群申请：
+
+1. 查询爱发电订单列表。
+2. 从订单备注中提取 5-12 位数字作为 QQ 号。
+3. 匹配申请入群的 QQ。
+4. 如果金额达到配置的最低发电金额，则自动同意入群。
+5. 未匹配、金额不足或缺少事件 flag 时，通知管理员群/用户人工处理。
+
+需要配置：
+
+- 启用入群发电校验
+- 入群校验群号
+- 入群校验查询页数
+- 入群最低发电金额
+- 入群校验通知群或通知用户
+
+## 持久化状态
+
+插件会在配置文件同目录生成运行状态文件：
+
+```text
+<配置文件名>.state.json
+```
+
+其中保存：
+
+- 最近通知历史
+- 已处理订单/事件去重缓存
+- 状态更新时间
+
+WebUI 中“清空历史/去重缓存”和“清空去重缓存”会同步更新该状态文件。
+
+## 开发检查
+
+运行语法检查：
 
 ```bash
-cd napcat/plugins
-git clone https://github.com/18848298290-del/Napcat-plugin-afdian/blob/main/napcat-plugin-afdian.zip
+npm run check
 ```
 
-确保目录结构如下：
+等价于：
 
+```bash
+node --check index.mjs
 ```
-plugins/
-└── AfdianNap/
-    ├── index.mjs
-    ├── package.json
-    └── webui/
-        └── dashboard.html
-```
-
-## ⚙️ 配置
-
-### 基础配置
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `enabled` | boolean | `true` | 启用/禁用插件 |
-| `webhookPath` | string | `/afdian/webhook` | Webhook 回调路径 |
-| `afdianUserId` | string | `""` | 爱发电用户 ID |
-| `afdianToken` | string | `""` | 爱发电 API Token |
-| `afdianApiBaseUrl` | string | `https://afdian.com/api/open` | 爱发电 API 地址 |
-| `afdianHomeUrl` | string | `""` | 爱发电主页链接 |
-
-### 通知配置
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `notifyGroups` | array | `[]` | 接收通知的 QQ 群号列表 |
-| `notifyUsers` | array | `[]` | 接收通知的 QQ 号列表 |
-| `messageTemplate` | string | (见下方) | 通知消息模板 |
-| `dedupeEnabled` | boolean | `true` | 启用订单去重 |
-| `historyLimit` | number | `100` | 最大历史记录数（1-1000） |
-| `debugLog` | boolean | `false` | 启用调试日志 |
-
-### 命令配置
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `commandEnabled` | boolean | `true` | 启用 QQ 命令 |
-| `commandPrefix` | string | `/afdian` | 命令前缀 |
-| `commandAdmins` | array | `[]` | 管理员 QQ 号列表 |
-
-### 入群验证配置
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `joinVerifyEnabled` | boolean | `false` | 启用入群验证 |
-| `joinVerifyGroups` | array | `[]` | 需要验证的群号列表 |
-| `joinVerifyPages` | number | `5` | 查询订单页数 |
-| `joinVerifyMinAmount` | number | `0` | 最低赞助金额（元） |
-| `joinVerifyAdminGroups` | array | `[]` | 验证失败通知的群号 |
-| `joinVerifyAdminUsers` | array | `[]` | 验证失败通知的 QQ 号 |
-
-### 安全配置
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `verifySignature` | boolean | `false` | 启用 Webhook 签名验证 |
-
-### 消息模板变量
-
-通知消息支持以下模板变量：
-
-| 变量 | 说明 |
-|------|------|
-| `{{userName}}` | 赞助者昵称 |
-| `{{planTitle}}` | 赞助方案标题 |
-| `{{amount}}` | 赞助金额 |
-| `{{outTradeNo}}` | 订单号 |
-| `{{time}}` | 赞助时间 |
-| `{{remark}}` | 订单备注 |
-
-## 🚀 使用方法
-
-1. 在爱发电后台设置 Webhook 回调地址：`http://<your-server>:<port>/afdian/webhook`
-2. 在插件配置中填写爱发电用户 ID 和 API Token
-3. 配置接收通知的 QQ 群号或 QQ 号
-4. 如需使用入群验证功能，开启 `joinVerifyEnabled` 并配置相关群号
-
-## 🌐 API 接口
-
-Web 管理面板提供以下 API 接口（需 Bearer Token 认证）：
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/Plugin/ext/AfdianNap/status` | 插件状态与统计 |
-| `GET` | `/api/Plugin/ext/AfdianNap/config` | 获取配置 |
-| `POST` | `/api/Plugin/ext/AfdianNap/config` | 保存配置 |
-| `GET` | `/api/Plugin/ext/AfdianNap/history` | 通知历史记录 |
-| `GET` | `/api/Plugin/ext/AfdianNap/orders` | 查询订单列表 |
-| `POST` | `/api/Plugin/ext/AfdianNap/query-order` | 查询指定订单 |
-| `POST` | `/api/Plugin/ext/AfdianNap/test-api` | 测试爱发电 API 连通性 |
-| `POST` | `/api/Plugin/ext/AfdianNap/test-notify` | 发送测试通知 |
-| `POST` | `/api/Plugin/ext/AfdianNap/clear-history` | 清空历史记录和去重缓存 |
-| `GET` | `/api/Plugin/ext/AfdianNap/health` | 健康检查（无需认证） |
-
-## 🔒 安全说明
-
-- Token 在 UI 和日志中均以 `****` 脱敏显示
-- Webhook 签名验证支持多种算法兼容
-- Web 管理面板需 Bearer Token 认证
-- 敏感字段在日志中自动过滤
-
-## 🛠️ 技术栈
-
-- **运行时**：Node.js (ES Module)
-- **依赖**：`napcat-types` 0.0.16
-- **无外部 HTTP 库**：使用 NapCat 内置路由系统
-- **存储**：内存存储（重启后历史记录和去重缓存清空）
-
-## 💜 支持开发者
-
-如果你觉得这个插件对你有帮助，欢迎去爱发电支持一下：
-https://www.ifdian.net/a/FengLan1201
-
-## 📄 许可证
-
-MIT License
-
-## 🙏 致谢
-
-- [NapCat](https://napneko.github.io/) - QQ Bot 框架
-- [爱发电](https://afdian.com/) - 创作者赞助平台
